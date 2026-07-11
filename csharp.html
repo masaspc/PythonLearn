@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="C#をはじめる人のための、やさしい学習ロードマップ">
+  <title>C# Start | はじめてのC#</title>
+  <link rel="stylesheet" href="./css/csharp.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./csharp.html">C# Start</a>
+    <nav aria-label="サイト内移動"><a href="#roadmap">学習の道のり</a><a href="#first-code">最初のコード</a><a class="python-link" href="./index.html">PythonLearnへ</a></nav>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="page-title">
+      <div class="hero-copy">
+        <p class="eyebrow">MAKE THINGS WITH C#</p>
+        <h1 id="page-title">はじめてのC#、<br>作りたいものから始めよう。</h1>
+        <p class="lead">ゲーム、デスクトップアプリ、Webサービス。C#は「作ってみたい」を形にしやすいプログラミング言語です。まずは、画面に言葉を表示するところから。</p>
+        <a class="button" href="#first-code">最初のコードを見る <span aria-hidden="true">↓</span></a>
+      </div>
+      <div class="hero-mark" aria-hidden="true"><span>C#</span><i></i><b></b></div>
+    </section>
+
+    <section class="why" aria-labelledby="why-title">
+      <div><p class="eyebrow">WHY C#?</p><h2 id="why-title">C#でできること</h2></div>
+      <div class="feature-grid">
+        <article><span class="feature-number">01</span><h3>ゲームを作る</h3><p>Unityなどを使って、2D・3Dゲームの仕組みを作れます。</p></article>
+        <article><span class="feature-number">02</span><h3>便利なアプリを作る</h3><p>自分用の道具や、仕事で役立つデスクトップアプリを形にできます。</p></article>
+        <article><span class="feature-number">03</span><h3>大きな仕組みを作る</h3><p>Webの裏側や業務システムにも使われる、しっかりした言語です。</p></article>
+      </div>
+    </section>
+
+    <section class="first-code" id="first-code" aria-labelledby="code-title">
+      <div class="code-intro"><p class="eyebrow">LESSON 01</p><h2 id="code-title">画面に「こんにちは」<br>と表示してみよう</h2><p>プログラムはコンピュータへの指示書です。`Console.WriteLine` は、その指示を画面に表示します。</p><p class="note">このページはC#コースの構成案です。コード実行機能は、次の段階で追加します。</p></div>
+      <pre class="code"><code><span class="purple">using</span> System;
+
+<span class="purple">class</span> <span class="sky">Program</span>
+{
+    <span class="purple">static void</span> <span class="sky">Main</span>()
+    {
+        Console.<span class="yellow">WriteLine</span>(<span class="green">"こんにちは、C#!"</span>);
+    }
+}</code></pre>
+    </section>
+
+    <section class="roadmap" id="roadmap" aria-labelledby="roadmap-title">
+      <p class="eyebrow">LEARNING PATH</p><h2 id="roadmap-title">続けられる、小さなステップ</h2>
+      <ol>
+        <li><span>01</span><div><h3>表示と変数</h3><p>文字や数を表示し、値を名前で覚える。</p></div></li>
+        <li><span>02</span><div><h3>計算と条件分岐</h3><p>計算し、「もし〜なら」を使って動きを変える。</p></div></li>
+        <li><span>03</span><div><h3>繰り返しと配列</h3><p>同じ処理を繰り返し、複数のデータを扱う。</p></div></li>
+        <li><span>04</span><div><h3>メソッドとクラス</h3><p>処理を整理して、自分だけの部品を作る。</p></div></li>
+      </ol>
+    </section>
+
+    <section class="closing"><p class="eyebrow">COMING NEXT</p><h2>読むだけで終わらない<br>C#学習ページへ。</h2><p>次は、コードを動かして答えを確かめられるレッスン形式を追加します。</p></section>
+  </main>
+  <footer><a href="./index.html">PythonLearn</a><span>・</span><span>C# Start concept page</span></footer>
+</body>
+</html>
