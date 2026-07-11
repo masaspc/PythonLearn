@@ -1,6 +1,4 @@
 using CSharpStart.Models;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 namespace CSharpStart.Services;
 public sealed class CourseService {
  public IReadOnlyList<Lesson> Lessons { get; } = [
@@ -9,6 +7,6 @@ public sealed class CourseService {
  new(3,"計算してみよう","数値どうしは + や * で計算できます。","price と count の合計金額を表示する","int price = 120;\nint count = 3;\n// 合計を表示します\n","int price = 120;\nint count = 3;\nConsole.WriteLine(price * count);",["int price","int count","Console.WriteLine(price * count)"],"掛け算には * を使います。"),
  new(4,"もし〜なら","if は条件が正しいときだけ処理を動かします。","score が60以上なら「合格」を表示する","int score = 80;\n// if 文を書きます\n","int score = 80;\nif (score >= 60)\n{\n    Console.WriteLine(\"合格\");\n}",["if","score >= 60","Console.WriteLine","合格"],"if (条件) の後を { } で囲みます。"),
  new(5,"繰り返して表示する","for は決まった回数だけ繰り返します。","0から2までの数を表示する","// for 文を書きます\n","for (int i = 0; i < 3; i++)\n{\n    Console.WriteLine(i);\n}",["for","i < 3","Console.WriteLine(i)"],"for (int i = 0; i < 3; i++) の形を使います。")];
- public CheckResult Check(Lesson lesson,string code) { var e=CSharpSyntaxTree.ParseText(code).GetDiagnostics().FirstOrDefault(x=>x.Severity==DiagnosticSeverity.Error); if(e is not null)return new(false,$"書き方を確認しましょう: {e.GetMessage()}"); var missing=lesson.RequiredTokens.FirstOrDefault(x=>!code.Contains(x,StringComparison.Ordinal)); return missing is null?new(true,"合格です！ よくできました。次へ進みましょう。 "):new(false,"まだ合格ではありません。"+lesson.Hint); }
+ public CheckResult Check(Lesson lesson,string code) { if(string.IsNullOrWhiteSpace(code)) return new(false,"まだコードが書かれていません。"+lesson.Hint); if(code.Count(c=>c=='{')!=code.Count(c=>c=='}')) return new(false,"{ と } の数がそろっているか確認しましょう。"); if(code.Count(c=>c=='\"')%2!=0) return new(false,"文字列を囲む \" が対になっているか確認しましょう。"); var missing=lesson.RequiredTokens.FirstOrDefault(x=>!code.Contains(x,StringComparison.Ordinal)); return missing is null?new(true,"合格です！ よくできました。次へ進みましょう。 "):new(false,"まだ合格ではありません。"+lesson.Hint); }
 }
 public sealed record CheckResult(bool Passed,string Message);
