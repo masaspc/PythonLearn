@@ -24,6 +24,18 @@ jobs:
           dotnet-version: 10.0.x
       - name: Publish C# Start
         run: dotnet publish csharp-app/CSharpStart.csproj -c Release -o .published/csharp
+      - name: Resolve the Blazor startup script fingerprint
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const root = '.published/csharp/wwwroot';
+          const framework = `${root}/_framework`;
+          const script = fs.readdirSync(framework).find(name => /^blazor\.webassembly\..+\.js$/.test(name));
+          if (!script) throw new Error('Blazor startup script was not found.');
+          const index = `${root}/index.html`;
+          const html = fs.readFileSync(index, 'utf8');
+          fs.writeFileSync(index, html.replace('blazor.webassembly#[.{fingerprint}].js', script));
+          NODE
       - name: Assemble Pages artifact
         run: |
           mkdir -p .published/site
