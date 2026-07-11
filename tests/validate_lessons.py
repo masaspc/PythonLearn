@@ -28,6 +28,7 @@ def fails_or_passes(code: str, test_code: str) -> bool:
 def main() -> None:
     manifest = json.loads((LESSON_DIR / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["version"] == 1
+    assert len(manifest["chapters"]) == 10
     checked = 0
     for filename in manifest["chapters"]:
         chapter = json.loads((LESSON_DIR / filename).read_text(encoding="utf-8"))
@@ -44,6 +45,7 @@ def main() -> None:
             assert fails_or_passes(exercise["solution"]["code"], exercise["testCode"]), f"solution failed: {lesson['id']}"
             assert not fails_or_passes(exercise["starterCode"], exercise["testCode"]), f"starter passed: {lesson['id']}"
             checked += 1
+    assert checked == 43, f"expected 43 lessons, got {checked}"
     print(f"OK: {checked} exercises (solutions pass, starters fail)")
 
 
