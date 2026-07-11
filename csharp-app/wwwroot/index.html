@@ -15,19 +15,14 @@
 
 <body>
     <script>
-        window.__csharpStartError = function (value) {
-            const box = document.getElementById('runtime-diagnostic');
-            if (!box) return;
-            box.hidden = false;
-            box.textContent = String(value);
-        };
-        window.addEventListener('error', event => window.__csharpStartError(event.error?.stack || event.message));
-        window.addEventListener('unhandledrejection', event => window.__csharpStartError(event.reason?.stack || event.reason));
-        const originalConsoleError = console.error.bind(console);
-        console.error = (...args) => {
-            window.__csharpStartError(args.map(String).join('\n'));
-            originalConsoleError(...args);
-        };
+        // ブラウザ拡張機能の注入スクリプトの例外を、学習アプリの実行エラーとして扱わない。
+        const isExtensionError = value => String(value?.filename || value?.stack || value || "").includes("chrome-extension://");
+        window.addEventListener("error", event => {
+            if (isExtensionError(event)) event.stopImmediatePropagation();
+        }, true);
+        window.addEventListener("unhandledrejection", event => {
+            if (isExtensionError(event.reason)) event.stopImmediatePropagation();
+        }, true);
     </script>
     <div id="app">
         <svg class="loading-progress">
@@ -36,7 +31,6 @@
         </svg>
         <div class="loading-progress-text"></div>
     </div>
-    <pre id="runtime-diagnostic" hidden aria-live="assertive"></pre>
 
     <div id="blazor-error-ui">
         An unhandled error has occurred.
