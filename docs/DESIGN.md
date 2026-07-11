@@ -173,3 +173,16 @@ pyodide.setStderr({ batched: (text) => self.postMessage({ type: "stderr", text }
     CPython バージョンで変わることがある。content-writer への申し送り事項)。
 11. タイムアウト再生成中は実行ボタンを無効化し、`ready` まで待たせる(連打対策)。進捗保存等の
     localStorage 処理は Worker と無関係にメインスレッドで行えるため影響なし。
+
+---
+
+## Phase 2: 本番パイロット実装（第1章）(2026-07-11)
+
+- `index.html` は `manifest.json` と各章JSONを読み込み、演習合格数を `localStorage` の
+  `pythonlearn.progress.v1` から表示する。データが破損していても空の進捗として安全に復帰する。
+- `lesson.html` はクエリ `?chapter=N&lesson=M` から該当章だけを取得する。本文のすべては
+  `createElement` と `textContent` で描画し、JSON・Python出力・エラーメッセージをHTMLとして解釈しない。
+- 演習判定も実行Workerで完結させる。ユーザーコードの標準出力だけを `StringIO` に捕捉して
+  `__stdout__` として同じグローバル名前空間のテストコードへ渡す。テスト自身の標準出力は破棄する。
+- `tests/validate_lessons.py` は、JSONの基本契約と「模範解答は合格・雛形は不合格」をCPythonで再現して
+  確認する。実行: `python tests/validate_lessons.py`。
