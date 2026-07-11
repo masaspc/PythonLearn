@@ -28,9 +28,13 @@ jobs:
         run: |
           node <<'NODE'
           const fs = require('fs');
-          const root = fs.existsSync('.published/csharp/wwwroot')
-            ? '.published/csharp/wwwroot'
-            : '.published/csharp';
+          const root = [
+            '.published/csharp/wwwroot/csharp',
+            '.published/csharp/wwwroot',
+            '.published/csharp/csharp',
+            '.published/csharp'
+          ].find(candidate => fs.existsSync(`${candidate}/_framework`));
+          if (!root) throw new Error('Blazor publish root was not found.');
           const framework = `${root}/_framework`;
           const script = fs.readdirSync(framework).find(name => /^blazor\.webassembly\..+\.js$/.test(name));
           if (!script) throw new Error('Blazor startup script was not found.');
@@ -43,11 +47,9 @@ jobs:
           mkdir -p .published/site
           rsync -a --exclude='.git' --exclude='.github' --exclude='csharp-app' --exclude='docs' --exclude='tests' --exclude='prototype' --exclude='.published' ./ .published/site/
           mkdir -p .published/site/csharp
-          if [ -d .published/csharp/wwwroot ]; then
-            cp -a .published/csharp/wwwroot/. .published/site/csharp/
-          else
-            cp -a .published/csharp/. .published/site/csharp/
-          fi
+          CSHARP_ROOT="$(find .published/csharp -type d -name _framework -printf '%h\n' | head -n 1)"
+          test -n "$CSHARP_ROOT"
+          cp -a "$CSHARP_ROOT"/. .published/site/csharp/
           touch .published/site/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:
