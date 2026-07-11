@@ -1,0 +1,45 @@
+name: Deploy PythonLearn and C# Start to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Publish C# Start
+        run: dotnet publish csharp-app/CSharpStart.csproj -c Release -o .published/csharp
+      - name: Assemble Pages artifact
+        run: |
+          mkdir -p .published/site
+          rsync -a --exclude='.git' --exclude='.github' --exclude='csharp-app' --exclude='docs' --exclude='tests' --exclude='prototype' --exclude='.published' ./ .published/site/
+          mkdir -p .published/site/csharp
+          cp -a .published/csharp/wwwroot/. .published/site/csharp/
+          touch .published/site/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .published/site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

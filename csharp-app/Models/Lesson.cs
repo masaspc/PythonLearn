@@ -1,0 +1,2 @@
+namespace CSharpStart.Models;
+public sealed record Lesson(int Number, string Title, string Summary, string Goal, string StarterCode, string SolutionCode, string[] RequiredTokens, string Hint);
