@@ -28,7 +28,9 @@ jobs:
         run: |
           node <<'NODE'
           const fs = require('fs');
-          const root = '.published/csharp/wwwroot';
+          const root = fs.existsSync('.published/csharp/wwwroot')
+            ? '.published/csharp/wwwroot'
+            : '.published/csharp';
           const framework = `${root}/_framework`;
           const script = fs.readdirSync(framework).find(name => /^blazor\.webassembly\..+\.js$/.test(name));
           if (!script) throw new Error('Blazor startup script was not found.');
@@ -41,7 +43,11 @@ jobs:
           mkdir -p .published/site
           rsync -a --exclude='.git' --exclude='.github' --exclude='csharp-app' --exclude='docs' --exclude='tests' --exclude='prototype' --exclude='.published' ./ .published/site/
           mkdir -p .published/site/csharp
-          cp -a .published/csharp/wwwroot/. .published/site/csharp/
+          if [ -d .published/csharp/wwwroot ]; then
+            cp -a .published/csharp/wwwroot/. .published/site/csharp/
+          else
+            cp -a .published/csharp/. .published/site/csharp/
+          fi
           touch .published/site/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:
