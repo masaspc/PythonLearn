@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pyodide 実行基盤 技術検証プロトタイプ(Phase 1)</title>
+
+<!--
+  Phase 1 技術検証用の使い捨てプロトタイプ。本番コード(js/ 配下)とは分離。
+  検証項目: Pyodide の Worker ロード / stdout・stderr キャプチャ /
+            10秒タイムアウト(terminate→再生成) / CodeMirror 6 の ESM CDN ロード
+  配信方法: リポジトリルートで `python -m http.server 8000` →
+            http://localhost:8000/prototype/index.html
+  (file:// では module worker と import map が動かないため必ず HTTP で配信すること)
+-->
+
+<!--
+  CodeMirror 6 用 import map。
+  esm.sh の「*」プレフィックスは「そのパッケージの依存をすべて external(bare specifier のまま)にする」
+  指定。全 @codemirror/@lezer パッケージをこの import map で一意の URL にピン留めすることで、
+  @codemirror/state 等が二重ロードされて起きる「Unrecognized extension」問題を根本的に回避する。
+  バージョンは 2026-07-11 時点の最新安定版にピン留め(docs/DESIGN.md に記録)。
+-->
+<script type="importmap">
+{
+  "imports": {
+    "codemirror": "https://esm.sh/*codemirror@6.0.2",
+    "@codemirror/autocomplete": "https://esm.sh/*@codemirror/autocomplete@6.20.3",
+    "@codemirror/commands": "https://esm.sh/*@codemirror/commands@6.10.4",
+    "@codemirror/language": "https://esm.sh/*@codemirror/language@6.12.4",
+    "@codemirror/lang-python": "https://esm.sh/*@codemirror/lang-python@6.2.1",
+    "@codemirror/lint": "https://esm.sh/*@codemirror/lint@6.9.7",
+    "@codemirror/search": "https://esm.sh/*@codemirror/search@6.7.1",
+    "@codemirror/state": "https://esm.sh/*@codemirror/state@6.7.1",
+    "@codemirror/view": "https://esm.sh/*@codemirror/view@6.43.6",
+    "@lezer/common": "https://esm.sh/*@lezer/common@1.5.2",
+    "@lezer/highlight": "https://esm.sh/*@lezer/highlight@1.2.3",
+    "@lezer/lr": "https://esm.sh/*@lezer/lr@1.4.10",
+    "@lezer/python": "https://esm.sh/*@lezer/python@1.1.19",
+    "@marijn/find-cluster-break": "https://esm.sh/@marijn/find-cluster-break@1.0.3",
+    "crelt": "https://esm.sh/crelt@1.0.7",
+    "style-mod": "https://esm.sh/style-mod@4.1.3",
+    "w3c-keyname": "https://esm.sh/w3c-keyname@2.2.8"
+  }
+}
+</script>
+
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, "Hiragino Kaku Gothic ProN", "Noto Sans JP", Meiryo, sans-serif;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 1rem;
+    background: #f5f7fa;
+    color: #1d2733;
+    line-height: 1.6;
+  }
+  h1 { font-size: 1.25rem; }
+  .status {
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    border: 1px solid transparent;
+  }
+  .status.loading { background: #fff6e0; border-color: #e8c56a; color: #7a5b00; }
+  .status.ready   { background: #e7f7ea; border-color: #7fc98d; color: #14602a; }
+  .status.running { background: #e5efff; border-color: #7fa8e8; color: #1a3f7a; }
+  .status.error   { background: #fde8e8; border-color: #e88a8a; color: #8a1f1f; }
+
+  #editor .cm-editor {
+    border: 1px solid #b9c2cc;
+    border-radius: 6px;
+    background: #ffffff;
+    font-size: 0.9rem;
+    max-height: 320px;
+  }
+  #editor .cm-editor.cm-focused { outline: 2px solid #4a90d9; }
+  #fallback-editor {
+    width: 100%;
+    min-height: 200px;
+    font-family: Consolas, "BIZ UDGothic", monospace;
+    font-size: 0.9rem;
+    border: 1px solid #b9c2cc;
+    border-radius: 6px;
+    padding: 0.5rem;
+  }
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0.75rem 0;
+  }
+  button {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    border: 1px solid #8a97a5;
+    background: #ffffff;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+  button:hover:not(:disabled) { background: #eef3f8; }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  #run-btn {
+    background: #2b6cb0;
+    border-color: #2b6cb0;
+    color: #ffffff;
+    font-weight: bold;
+  }
+  #run-btn:hover:not(:disabled) { background: #245a94; }
+  #output {
+    background: #10151c;
+    color: #d7e0ea;
+    font-family: Consolas, "BIZ UDGothic", monospace;
+    font-size: 0.875rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+    min-height: 10rem;
+    max-height: 22rem;
+    overflow: auto;
+    padding: 0.75rem;
+    border-radius: 6px;
+    margin: 0;
+  }
+  #output .stderr { color: #ff9191; }
+  #output .system { color: #86b6ff; }
+  #output .system-error { color: #ffbe6e; }
+  details { font-size: 0.875rem; margin-top: 1rem; }
+  details li { margin-bottom: 0.25rem; }
+  footer { font-size: 0.75rem; color: #5a6673; margin-top: 1.5rem; }
+</style>
+</head>
+<body>
+
+<h1>Pyodide 実行基盤 技術検証プロトタイプ(Phase 1)</h1>
+
+<p id="status" class="status loading" role="status">実行環境を準備しています…(初回は数十MBのダウンロードが発生します)</p>
+
+<section>
+  <h2 style="font-size:1rem;">Python コード</h2>
+  <div id="editor"></div>
+  <textarea id="fallback-editor" hidden
+    aria-label="Pythonコード入力(フォールバック)"
+    spellcheck="false"></textarea>
+</section>
+
+<div class="toolbar">
+  <button id="run-btn" disabled>▶ 実行</button>
+  <button id="clear-btn">出力をクリア</button>
+</div>
+
+<div class="toolbar" aria-label="検証用サンプルコード">
+  <span style="align-self:center; font-size:0.85rem;">サンプル:</span>
+  <button data-sample="basic">基本</button>
+  <button data-sample="loop">無限ループ(タイムアウト検証)</button>
+  <button data-sample="error">エラー(traceback検証)</button>
+  <button data-sample="input">input()(ガード検証)</button>
+</div>
+
+<section>
+  <h2 style="font-size:1rem;">出力</h2>
+  <pre id="output"></pre>
+</section>
+
+<details>
+  <summary>手動検証チェックリスト(ブラウザ実機確認用)</summary>
+  <ol>
+    <li>ページを開くと「実行環境を準備しています…」が表示され、実行ボタンが無効であること</li>
+    <li>Pyodide ロード完了後、ステータスが「準備完了」になり実行ボタンが有効化されること</li>
+    <li>エディタにシンタックスハイライト(キーワード・文字列の色分け)と行番号が表示されること(CodeMirror 6)</li>
+    <li>「基本」サンプルを実行し、print() の出力が出力エリアに表示されること</li>
+    <li>「エラー」サンプルを実行し、Python の traceback(ZeroDivisionError)が表示されること</li>
+    <li>「無限ループ」サンプルを実行し、約10秒後にタイムアウト表示が出て、ページが固まらず、環境再準備後に再度実行できること</li>
+    <li>「input()」サンプルを実行し、日本語の誘導メッセージ付きエラーになること</li>
+    <li>スマートフォン幅(DevTools のデバイスモード等)でレイアウトが破綻しないこと</li>
+  </ol>
+</details>
+
+<footer>
+  検証構成: Pyodide v314.0.2(jsDelivr 公式CDN / ES module worker)・CodeMirror 6(esm.sh + import map)。
+  詳細な設計判断は docs/DESIGN.md を参照。
+</footer>
+
+<script type="module" src="./main.js"></script>
+</body>
+</html>
